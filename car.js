@@ -120,7 +120,6 @@ class F {
     }
     
     static ellipse(cx, cy, rx, ry){
-        ctx.fillStyle = "black";
         ctx.save(); // Save state
         ctx.beginPath();
         ctx.translate(cx - rx, cy - ry);
@@ -142,6 +141,13 @@ class Car {
         this._turn = varHash.turn;
         this._friction = varHash.friction;
         this._terrain = varHash.terrain;
+        for (var i = 0; i < this._terrain.length; i++) {
+            for (var j = 0; j < this._terrain[i].length; j++) {
+                for (var k = 0; k < this._terrain[i][j].length; k++) {
+                    this._terrain[i][j][k] = this._terrain[i][j][k] * 2
+                }
+            }
+        }
         this._weight = varHash.weight;
         this._drift = varHash.drift;
         this._velocity = {
@@ -149,6 +155,10 @@ class Car {
             y: 0
         };
     }
+
+    get rotation() { return this._r; }
+    get speed() { return Math.sqrt(this._velocity.x ** 2 + this._velocity.y ** 2); }
+    get maxspeed() { return this._maxspeed; }
 
     tick(leftRight, driftLeftRight, forewardBack) {
         // Apply friction
@@ -223,7 +233,10 @@ class Car {
         var hitbox = this.hitbox();
         var collisionLines = [];
         for (var i = 0; i < this._terrain.length; i++) {
-            if (F.circleIntersect(this._terrain[i], hitbox)) collisionLines.push(this._terrain[i]);
+            if (F.circleIntersect(this._terrain[i], hitbox)) {
+                collisionLines.push(this._terrain[i]);
+                driftLeftRight = 0;
+            }
         }
         return collisionLines;
     }
@@ -233,14 +246,20 @@ class Car {
     }
 
     render3Dplayer() {
+        ctx.fillStyle = "red";
         F.ellipse(360, 345, 42, 9);
         F.ellipse(360, 380, 42, 14);
         ctx.fillRect(318, 345, 84, 35);
+        ctx.strokeStyle = "black";
+        ctx.beginPath();
+        ctx.moveTo(360, 345);
+        ctx.lineTo(360 + driftLeftRight * 12 + (F.int(keys["d"]) - F.int(keys["a"])) * 10, 338);
+        ctx.stroke();
     }
 
     draw3DMap() {
         var terrainWithPlayer = this._terrain.slice(0);
-        R.renderWalls(this._x - F.cos(this._r) * 110, this._y - F.sin(this._r) * 110, this._r, terrainWithPlayer);
+        R.renderWalls(this._x - F.cos(this._r) * 110, this._y - F.sin(this._r) * 110, this._r, terrainWithPlayer, "#9F9F10");
     }
 
     renderPlayer() {
@@ -269,16 +288,16 @@ class Car {
 }
 
 var player = new Car({
-    x: 70,
+    x: 100,
     y: 200,
     r: 270,
     size: 10,
-    maxspeed: 5,
-    acceleration: 0.17,
+    maxspeed: 7.5,
+    acceleration: 0.3,
     turn: 1.5,
     friction: 0.96,
     weight: 0.4,
-    drift: 1.3,
+    drift: 1.2,
     terrain: [[[44, 90], [100, 26]], [[100, 26], [255, 23]], [[255, 23], [362, 25]], [[362, 25], [414, 37]], [[414, 37], [475, 30]], [[475, 30], [558, 25]], [[558, 25], [642, 51]], [[642, 51], [681, 111]], [[681, 111], [689, 157]], [[689, 157], [689, 217]], [[689, 217], [679, 246]], [[679, 246], [661, 319]], [[661, 319], [586, 361]], [[586, 361], [559, 408]], [[559, 408], [522, 446]], [[522, 446], [466, 453]], [[466, 453], [438, 444]], [[438, 444], [408, 391]], [[408, 391], [381, 322]], [[381, 322], [341, 300]], [[341, 300], [306, 313]], [[306, 313], [263, 347]], [[263, 347], [219, 385]], [[219, 385], [176, 409]], [[176, 409], [96, 412]], [[96, 412], [64, 395]], [[64, 395], [40, 351]], [[40, 351], [27, 308]], [[27, 308], [19, 259]], [[19, 259], [16, 211]], [[16, 211], [27, 173]], [[27, 173], [44, 90]], [[133, 111], [216, 92]], [[216, 92], [278, 90]], [[278, 90], [321, 95]], [[321, 95], [352, 110]], [[352, 110], [372, 121]], [[372, 121], [409, 126]], [[409, 126], [424, 119]], [[424, 119], [451, 108]], [[451, 108], [525, 92]], [[525, 92], [570, 95]], [[570, 95], [599, 124]], [[599, 124], [611, 176]], [[611, 176], [608, 239]], [[608, 239], [587, 273]], [[587, 273], [554, 284]], [[554, 284], [532, 323]], [[532, 323], [514, 350]], [[514, 350], [485, 369]], [[485, 369], [475, 347]], [[475, 347], [460, 309]], [[460, 309], [441, 277]], [[441, 277], [417, 258]], [[417, 258], [383, 223]], [[383, 223], [364, 214]], [[364, 214], [346, 206]], [[346, 206], [320, 205]], [[320, 205], [304, 208]], [[304, 208], [248, 221]], [[248, 221], [183, 231]], [[183, 231], [136, 220]], [[136, 220], [116, 196]], [[116, 196], [114, 154]], [[114, 154], [133, 111]], [[113, 281], [131, 277]], [[131, 277], [154, 282]], [[154, 282], [169, 304]], [[169, 304], [169, 328]], [[169, 328], [154, 351]], [[154, 351], [128, 360]], [[128, 360], [96, 351]], [[96, 351], [69, 311]], [[69, 311], [79, 298]], [[79, 298], [97, 281]], [[97, 281], [113, 281]]]
 });
 
@@ -287,7 +306,7 @@ var driftLeftRight = 0;
 let keys = {};
 onkeydown = onkeyup = function(e) { // Keypress handler
     e = e || window.event;
-    if (e.key == "k" && e.type == "keydown" && !keys["k"]) driftLeftRight = F.int(keys["d"]) - F.int(keys["a"]);
+    if (e.key == "k" && e.type == "keydown" && !keys["k"] && (player.speed > 0.75 * player.maxspeed || player.speed == 0)) driftLeftRight = F.int(keys["d"]) - F.int(keys["a"]);
     keys[e.key] = (e.type == "keydown");
     if (!keys["k"]) driftLeftRight = 0;
 }
@@ -300,7 +319,12 @@ function loop() {
     var keyBackwards = F.int(keys["s"]);
     player.tick(keyRight - keyLeft, driftLeftRight, keyForewards - keyBackwards);
     ctx.clearRect(0, 0, c.width, c.height);
+    ctx.fillStyle = "#6878FF";
+    ctx.fillRect(0, 0, c.width, c.height / 2);
+    ctx.fillStyle = "#CFCF1F";
+    ctx.fillRect(0, c.height / 2, c.width, c.height / 2);
+    ctx.fillStyle = "yellow";
+    F.ellipse(720 - player.rotation * 8, 80, 20, 20);
     player.draw3DMap();
-    player.render3Dplayer();
 }
 loop();

@@ -37,26 +37,16 @@ class R {
         return Math.min.apply(Math, array);
     };
 
-    static toHex(n) { // Converts an integer into a hex string
-        if (n > 255) n = 255;
-        if (n < 0) n = 0;
-        var upperNible = n >> 4;
-        var lowerNible = n & 15;
-        var map = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"];
-        var hexString = map[upperNible] + map[lowerNible];
-        return hexString;
-    }
-
-    static drawWall(distance, degrees) { // Renders a vertical line, used for displaying walls
+    static drawWall(distance, degrees, color) { // Renders a vertical line, used for displaying walls
         const HALFHEIGHT = c.height / 2;
         ctx.beginPath();
-        var distanceInHex = R.toHex(distance / 10);
         distance = distance / 32;
-        ctx.strokeStyle = "#" + distanceInHex + distanceInHex + distanceInHex;
+        ctx.strokeStyle = color;
         ctx.lineWidth = 1;
-        ctx.moveTo(c.width * (degrees) / 90, HALFHEIGHT + HALFHEIGHT / (distance / 1.5));
+        ctx.moveTo(c.width * (degrees) / 90, HALFHEIGHT + HALFHEIGHT / (distance / 1.7));
         ctx.lineTo(c.width * (degrees) / 90, HALFHEIGHT + HALFHEIGHT / (distance / 2));
         ctx.stroke();
+
     }
 
     static fixRotation(rotation) {
@@ -69,10 +59,11 @@ class R {
         return Math.abs(distance * R.cos(rotationRelativeToPlayersCenter));
     }
 
-    static renderWalls(playerX, playerY, playerR, fieldLines) {
+    static renderWalls(playerX, playerY, playerR, fieldLines, color = "black") {
         playerR = Math.atan2(F.cos(playerR), F.sin(playerR)) * (180 / Math.PI); // Account for stupidity
         const SIGHT = 10000;
-        for (var i = 0; i <= 90; i += 0.1) {
+        var distanceArray = [];
+        for (var i = 0; i <= 90; i += 1/8) {
             var rotationRelativeToPlayersCenter = R.fixRotation(i - 45);
             rotationRelativeToPlayersCenter = -rotationRelativeToPlayersCenter; // Account for stupidity
             var rotationRelativeToZero = R.fixRotation(rotationRelativeToPlayersCenter + playerR);
@@ -85,8 +76,16 @@ class R {
             }
             var intersectionDistances = intersections.map(x => Math.sqrt((x[0] - playerX) ** 2 + (x[1] - playerY) ** 2));
             for (var j = 0; j < intersectionDistances.length; j++) {
-                R.drawWall(R.unDistort(intersectionDistances[j], rotationRelativeToPlayersCenter), i);
+                //R.drawWall(R.unDistort(intersectionDistances[j], rotationRelativeToPlayersCenter), i, color);
+                distanceArray.push([R.unDistort(intersectionDistances[j], rotationRelativeToPlayersCenter), i, color]);
             }
+        }
+        for (var i = 0; i < distanceArray.length; i++) {
+            if (distanceArray[i][0] > 110) R.drawWall(distanceArray[i][0], distanceArray[i][1], distanceArray[i][2]);
+        }
+        player.render3Dplayer();
+        for (var i = 0; i < distanceArray.length; i++) {
+            if (distanceArray[i][0] <= 110) R.drawWall(distanceArray[i][0], distanceArray[i][1], distanceArray[i][2]);
         }
     }
 }
